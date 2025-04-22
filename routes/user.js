@@ -128,4 +128,32 @@ router.post("/login", async (req, res, next) => {
   }
 });
 
+router.post("/steps/update", async (req, res) => {
+  const { username, steps, date } = req.body;
+
+  try {
+    const user = await User.findOne({ username });
+
+    if (!user) {
+      return res.status(404).json({ success: false, msg: "User not found" });
+    }
+
+    let stepEntry = user.steps.find((entry) => entry.date === date);
+
+    if (stepEntry) {
+      stepEntry.count = steps; // Update if already exists
+    } else {
+      user.steps.push({ date, count: steps });
+    }
+
+    await user.save();
+
+    res.status(200).json({ success: true, msg: "Steps updated" });
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).json({ success: false, msg: "Server error" });
+  }
+});
+
+
 module.exports = router;
