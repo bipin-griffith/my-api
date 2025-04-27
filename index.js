@@ -39,7 +39,7 @@
 
 const express = require('express');
 const morgan = require('morgan');
-const colors = require('colors'); // optional for terminal styling
+const colors = require('colors'); 
 const dotenv = require('dotenv');
 const connectDB = require('./config/db');
 

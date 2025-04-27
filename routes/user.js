@@ -5,155 +5,85 @@ const bcryptjs = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const user_jwt = require("../middleware/user_jwt");
 
-router.get("/", user_jwt, async (req, res, next) => {
+router.get("/", user_jwt, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select("-password");
-    res.status(200).json({
-      success: true,
-      user: user,
-    });
+    res.status(200).json({ success: true, user });
   } catch (err) {
-    console.log(err.message);
-    res.status(500).json({
-      success: false,
-      msg: "server error",
-    });
-    next();
+    res.status(500).json({ success: false, msg: "Server error" });
   }
 });
 
-router.post("/register", async (req, res, next) => {
+router.post("/register", async (req, res) => {
   const { username, email, password } = req.body;
-
   try {
-    let user_exist = await User.findOne({ email });
-
-    if (user_exist) {
-      return res.json({
-        success: false,
-        msg: "user already exists",
-      });
-    }
-
-    let user = new User();
-    user.username = username;
-    user.email = email;
+    const exists = await User.findOne({ email });
+    if (exists) return res.json({ success: false, msg: "User already exists" });
 
     const salt = await bcryptjs.genSalt(10);
-    user.password = await bcryptjs.hash(password, salt);
+    const hashedPassword = await bcryptjs.hash(password, salt);
 
-    let size = 200;
-    user.avatar = `https://gravatar.com/avatar/?s=${size}&d=retro`;
-
-    await user.save();
-
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-
-    jwt.sign(
-      payload,
-      process.env.jwtUserSecret,
-      { expiresIn: 360000 },
-      (err, token) => {
-        if (err) throw err;
-        res.status(200).json({
-          success: true,
-          token: token,
-        });
-      }
-    );
-  } catch (err) {
-    console.error(err.message);
-    res.status(500).json({
-      success: false,
-      msg: "Server Error",
+    const newUser = new User({
+      username,
+      email,
+      password: hashedPassword,
+      avatar: `https://gravatar.com/avatar/?s=200&d=retro`,
+      steps: [],
+      treesPlanted: 0
     });
+
+    await newUser.save();
+
+    const token = jwt.sign({ user: { id: newUser.id } }, process.env.jwtUserSecret, { expiresIn: 360000 });
+    res.status(200).json({ success: true, token });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: "Server Error" });
   }
 });
 
-router.post("/login", async (req, res, next) => {
-  const email = req.body.email;
-  const password = req.body.password;
-
+router.post("/login", async (req, res) => {
+  const { email, password } = req.body;
   try {
-    let user = await User.findOne({
-      email: email,
-    });
-
-    if (!user) {
-      res.status(400).json({
-        success: false,
-        msg: "User not exists",
-      });
-    }
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ success: false, msg: "User does not exist" });
 
     const isMatch = await bcryptjs.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ success: false, msg: "Password incorrect" });
 
-    if (!isMatch) {
-      res.status(400).json({
-        success: false,
-        msg: "Password incorrect",
-      });
-    }
-
-    const payload = {
-      user: {
-        id: user.id,
-      },
-    };
-
-    jwt.sign(payload, process.env.jwtUserSecret, {
-        expiresIn: 360000
-    }, (error, token) => {
-        if(error) throw error;
-
-        res.status(200).json({
-            success : true, 
-            msg : "user logged in",
-            token : token,
-            user: user
-        })
-    })
-
-
+    const token = jwt.sign({ user: { id: user.id } }, process.env.jwtUserSecret, { expiresIn: 360000 });
+    res.status(200).json({ success: true, msg: "User logged in", token, user });
   } catch (err) {
-    console.log(err.message);
-    res.status(500).json({
-      success: false,
-      msg: "Server error",
-    });
+    res.status(500).json({ success: false, msg: "Server error" });
   }
 });
 
 router.post("/steps/update", async (req, res) => {
   const { username, steps, date } = req.body;
-
   try {
     const user = await User.findOne({ username });
+    if (!user) return res.status(404).json({ success: false, msg: "User not found" });
 
-    if (!user) {
-      return res.status(404).json({ success: false, msg: "User not found" });
-    }
-
-    let stepEntry = user.steps.find((entry) => entry.date === date);
-
-    if (stepEntry) {
-      stepEntry.count = steps; // Update if already exists
+    const existing = user.steps.find(s => s.date === date);
+    if (existing) {
+      existing.count = steps;
     } else {
       user.steps.push({ date, count: steps });
     }
 
-    await user.save();
+    // 🎉 Award tree for 6000+ steps
+    if (steps >= 6000) {
+      const todayEntry = user.steps.find(s => s.date === date);
+      if (!todayEntry?.planted) {
+        user.treesPlanted += 1;
+        todayEntry.planted = true;
+      }
+    }
 
+    await user.save();
     res.status(200).json({ success: true, msg: "Steps updated" });
   } catch (err) {
-    console.error(err.message);
     res.status(500).json({ success: false, msg: "Server error" });
   }
 });
-
 
 module.exports = router;
