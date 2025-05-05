@@ -86,4 +86,34 @@ router.post("/steps/update", async (req, res) => {
   }
 });
 
+// update profile
+router.put("/update-profile", async (req, res) => {
+  const { username, email } = req.body;
+  try {
+      let user = await User.findOne({ email });
+      if (!user) return res.status(404).json({ success: false, msg: "User not found" });
+
+      user.username = username;
+      await user.save();
+
+      res.json({ success: true, msg: "Profile Updated" });
+  } catch (err) {
+      res.status(500).json({ success: false, msg: "Server error" });
+  }
+});
+
+// leaderboard
+router.get("/leaderboard", async (req, res) => {
+  try {
+      const users = await User.find({}).sort({ treesPlanted: -1 }).limit(10);
+      res.json(users.map(user => ({
+          username: user.username,
+          treesPlanted: user.treesPlanted
+      })));
+  } catch (err) {
+      res.status(500).json({ success: false, msg: "Server error" });
+  }
+});
+
+
 module.exports = router;
