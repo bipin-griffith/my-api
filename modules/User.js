@@ -15,6 +15,10 @@ const userSchema = new mongoose.Schema({
   treesPlanted: {
     type: Number,
     default: 0
+  },
+  isSubscribed: {
+    type: Boolean,
+    default: false 
   }
 });
 
