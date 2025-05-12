@@ -47,7 +47,7 @@ router.post("/register", async (req, res) => {
     });
     await user.save();
 
-    const link = `${process.env.CLIENT_URL}/verify/${user._id}/${token}`;
+    const link = `${process.env.CLIENT_URL}/api/sot/auth/verify/${user._id}/${token}`;
     const emailSent = await sendEmail(email, "Verify Email", `Click <a href="${link}">here</a> to verify.`);
 
     if (!emailSent) {
