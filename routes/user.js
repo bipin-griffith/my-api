@@ -107,8 +107,23 @@ router.post("/login", async (req, res) => {
     return res.status(403).json({ success: false, msg: "Verify your email first" });
 
   const token = jwt.sign({ user: { id: user.id } }, process.env.jwtUserSecret, { expiresIn: "1d" });
-  res.json({ success: true, token });
+
+  // ✅ Include user info in response
+  res.json({
+    success: true,
+    token,
+    user: {
+      username: user.username,
+      email: user.email,
+      avatar: user.avatar,
+      steps: user.steps,
+      treesPlanted: user.treesPlanted,
+      isVerified: user.isVerified
+    }
+  });
 });
+
+
 
 //POST: Forget Password
 router.post("/forgot-password", async (req, res) => {
