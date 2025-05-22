@@ -56,6 +56,8 @@ app.use(express.json());
 
 // Routes
 app.use('/api/sot/auth', require('./routes/user'));
+app.use("/api/sot/events", require("./routes/events"));
+
 
 // Start HTTP server
 app.listen(PORT, () => {
