@@ -9,6 +9,12 @@ router.get("/", async (req, res) => {
   res.json({ success: true, events });
 });
 
+router.post("/", async (req, res) => {
+  const ev = new Event(req.body);
+  await ev.save();
+  res.json({ success: true, event: ev });
+});
+
 // Create event (admin)
 router.post("/", async (req, res) => {
   const ev = new Event(req.body);
