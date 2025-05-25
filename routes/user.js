@@ -203,10 +203,12 @@ router.get("/steps/summary", user_jwt, async (req, res) => {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, msg: "User not found" });
 
-    const summary = user.steps.map(s => ({
-      date: s.date,
-      count: s.count
-    }));
+    const summary = user.steps
+      .filter(s => s && s.date && typeof s.count === 'number')
+      .map(s => ({
+        date: s.date,
+        count: s.count
+      }));
 
     res.status(200).json({ success: true, summary });
   } catch {
