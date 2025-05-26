@@ -231,20 +231,25 @@ router.post("/dev/add-dummy-steps", async (req, res) => {
       return res.status(404).json({ success: false, msg: "User not found" });
     }
 
-    user.steps = [
-      { date: "2024-05-19", count: 4200, planted: false },
-      { date: "2024-05-20", count: 6200, planted: true },
-      { date: "2024-05-21", count: 3100, planted: false },
-      { date: "2024-05-22", count: 7400, planted: true },
-      { date: "2024-05-23", count: 2900, planted: false },
-      { date: "2024-05-24", count: 6800, planted: true },
-      { date: "2024-05-25", count: 5600, planted: false }
-    ];
+    const today = new Date();
+    const stepsArray = [];
 
-    user.treesPlanted = user.steps.filter(s => s.planted).length;
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+
+      const isoDate = d.toISOString().split("T")[0]; // yyyy-MM-dd
+      const stepCount = Math.floor(Math.random() * 8000) + 1000; // 1000–8999
+      const planted = stepCount >= 6000;
+
+      stepsArray.push({ date: isoDate, count: stepCount, planted });
+    }
+
+    user.steps = stepsArray;
+    user.treesPlanted = stepsArray.filter(s => s.planted).length;
     await user.save();
 
-    res.status(200).json({ success: true, msg: "Dummy steps added", user });
+    res.status(200).json({ success: true, msg: "Dynamic dummy steps added", user });
   } catch (err) {
     console.error(err);
     res.status(500).json({ success: false, msg: "Server error" });
