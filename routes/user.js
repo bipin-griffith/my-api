@@ -167,35 +167,43 @@ router.post("/reset-password/:id/:token", async (req, res) => {
 
 
 
-// POST: Steps Update (now protected!)
 router.post("/steps/update", user_jwt, async (req, res) => {
-  const { steps, date } = req.body;
+  let { steps, date } = req.body;
+
   try {
     const user = await User.findById(req.user.id);
     if (!user) return res.status(404).json({ success: false, msg: "User not found" });
 
-    const existing = user.steps.find((s) => s.date === date);
+    // 🛠 Normalize date to YYYY-MM-DD
+    const parsedDate = new Date(date);
+    const isoDate = parsedDate.toISOString().split("T")[0]; // 2025-05-26
+
+    const existing = user.steps.find((s) => s.date === isoDate);
     if (existing) {
       existing.count = steps;
-      user.markModified("steps");  // ✅ Mark array as modified
     } else {
-      user.steps.push({ date, count: steps });
+      user.steps.push({ date: isoDate, count: steps });
     }
 
-    if (steps >= 6000) {
-      const todayEntry = user.steps.find((s) => s.date === date);
-      if (!todayEntry?.planted) {
-        user.treesPlanted += 1;
-        todayEntry.planted = true;
-      }
+    // 🌱 Tree planting logic
+    const todayEntry = user.steps.find((s) => s.date === isoDate);
+    if (steps >= 6000 && todayEntry && !todayEntry.planted) {
+      todayEntry.planted = true;
+      user.treesPlanted += 1;
     }
 
+    user.markModified("steps");
     await user.save();
-    res.status(200).json({ success: true, msg: "Steps updated" });
+    
+    console.log("👣 Updated steps for:", user.username, "Date:", isoDate, "Steps:", steps);
+
+    return res.status(200).json({ success: true, msg: "Steps updated" });
   } catch (err) {
-    res.status(500).json({ success: false, msg: "Server error" });
+    console.error(err);
+    return res.status(500).json({ success: false, msg: "Server error" });
   }
 });
+
 
 // GET: Steps Summary
 router.get("/steps/summary", user_jwt, async (req, res) => {
@@ -216,6 +224,32 @@ router.get("/steps/summary", user_jwt, async (req, res) => {
   }
 });
 
+router.post("/dev/add-dummy-steps", async (req, res) => {
+  try {
+    const user = await User.findOne({ username: "bipin" });
+    if (!user) {
+      return res.status(404).json({ success: false, msg: "User not found" });
+    }
+
+    user.steps = [
+      { date: "2024-05-19", count: 4200, planted: false },
+      { date: "2024-05-20", count: 6200, planted: true },
+      { date: "2024-05-21", count: 3100, planted: false },
+      { date: "2024-05-22", count: 7400, planted: true },
+      { date: "2024-05-23", count: 2900, planted: false },
+      { date: "2024-05-24", count: 6800, planted: true },
+      { date: "2024-05-25", count: 5600, planted: false }
+    ];
+
+    user.treesPlanted = user.steps.filter(s => s.planted).length;
+    await user.save();
+
+    res.status(200).json({ success: true, msg: "Dummy steps added", user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ success: false, msg: "Server error" });
+  }
+});
 
 // PUT: Update Profile (now protected!)
 router.put("/update-profile", user_jwt, async (req, res) => {
@@ -287,7 +321,6 @@ router.get("/insights", user_jwt, async (req, res) => {
     res.status(500).json({ success: false, msg: "Server error" });
   }
 });
-
 
 
 module.exports = router;
