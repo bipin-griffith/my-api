@@ -7,7 +7,7 @@ const user_jwt = require("../middleware/user_jwt");
 const crypto = require("crypto");
 
 
-const sendEmail = require("../utils/mail");
+const { sendEmail, buildEmailHTML } = require("../utils/mail");
 
 
 // GET: Profile (protected)
@@ -48,7 +48,14 @@ router.post("/register", async (req, res) => {
     await user.save();
 
     const link = `${process.env.CLIENT_URL}/api/sot/auth/verify/${user._id}/${token}`;
-    const emailSent = await sendEmail(email, "Verify Email", `Click <a href="${link}">here</a> to verify.`);
+    const html = buildEmailHTML(
+      "Verify Your Email",
+      "Thanks for joining StepoTree! Click the button below to verify your email address.",
+      "Verify Email",
+      link
+    );
+    await sendEmail(email, "Verify Your Email", html);
+
 
     if (!emailSent) {
       return res.status(500).json({ success: false, msg: "Email sending failed" });
@@ -138,7 +145,14 @@ router.post("/forgot-password", async (req, res) => {
     await user.save();
 
     const link = `${process.env.CLIENT_URL}/reset-password/${user._id}/${token}`;
-    const emailSent = await sendEmail(email, "Reset Password", `Reset your password <a href="${link}">here</a>`);
+    const html = buildEmailHTML(
+      "Reset Your Password",
+      "We received a request to reset your password. Click below to proceed.",
+      "Reset Password",
+      link
+    );
+    await sendEmail(email, "Reset Password", html);
+
 
     if (!emailSent) {
       return res.status(500).json({ success: false, msg: "Failed to send reset email" });
@@ -149,22 +163,67 @@ router.post("/forgot-password", async (req, res) => {
     res.status(500).json({ success: false, msg: "Server error" });
   }
 });
-router.post("/reset-password/:id/:token", async (req, res) => {
-  const user = await User.findOne({
-    _id: req.params.id,
-    resetToken: req.params.token,
-    resetTokenExpiry: { $gt: Date.now() }
-  });
-  if (!user) return res.status(400).json({ msg: "Invalid or expired token" });
 
-  user.password = await bcryptjs.hash(req.body.password, 10);
-  user.resetToken = null;
-  user.resetTokenExpiry = null;
-  await user.save();
+router.get("/reset-password/:id/:token", async (req, res) => {
+  const { id, token } = req.params;
 
-  res.json({ success: true, msg: "Password reset" });
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+      <meta charset="UTF-8" />
+      <title>Reset Password</title>
+      <style>
+        body { font-family: sans-serif; background: #f0f0f0; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        input, button { width: 100%; padding: 10px; margin-top: 10px; font-size: 16px; }
+        h2 { margin-bottom: 10px; color: #2E7D32; }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <h2>Reset Your Password</h2>
+        <form method="POST" action="/api/sot/auth/reset-password/${id}/${token}">
+          <input type="password" name="password" placeholder="Enter new password" required />
+          <button type="submit">Reset Password</button>
+        </form>
+      </div>
+    </body>
+    </html>
+  `;
+
+  res.send(html);
 });
 
+
+router.post("/reset-password/:id/:token", async (req, res) => {
+  try {
+    const user = await User.findOne({
+      _id: req.params.id,
+      resetToken: req.params.token,
+      resetTokenExpiry: { $gt: Date.now() }
+    });
+
+    if (!user) {
+      return res.send("<h2>⛔ Invalid or expired token</h2>");
+    }
+
+    const newPassword = req.body.password;
+    if (!newPassword || newPassword.length < 6) {
+      return res.send("<h2>Password must be at least 6 characters</h2>");
+    }
+
+    user.password = await bcryptjs.hash(newPassword, 10);
+    user.resetToken = null;
+    user.resetTokenExpiry = null;
+    await user.save();
+
+    res.send("<h2>✅ Password has been reset. You can now log in.</h2>");
+  } catch (err) {
+    console.error(err);
+    res.send("<h2>❌ Something went wrong. Try again.</h2>");
+  }
+});
 
 
 router.post("/steps/update", user_jwt, async (req, res) => {
