@@ -151,12 +151,14 @@ router.post("/forgot-password", async (req, res) => {
       "Reset Password",
       link
     );
-    await sendEmail(email, "Reset Password", html);
 
+    const emailSent = await sendEmail(email, "Reset Password", html);
 
     if (!emailSent) {
+      console.log("Fail to sent mail");
       return res.status(500).json({ success: false, msg: "Failed to send reset email" });
     }
+
 
     res.json({ success: true, msg: "Reset link sent" });
   } catch (err) {
