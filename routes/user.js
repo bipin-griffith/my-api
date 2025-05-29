@@ -185,7 +185,7 @@ router.get("/reset-password/:id/:token", async (req, res) => {
     <body>
       <div class="container">
         <h2>Reset Your Password</h2>
-        <form method="POST" action="/api/sot/auth/reset-password/${id}/${token}">
+        <form method="POST" action="https://my-api-o20r.onrender.com/api/sot/auth/reset-password/${id}/${token}">
           <input type="password" name="password" placeholder="Enter new password" required />
           <button type="submit">Reset Password</button>
         </form>
