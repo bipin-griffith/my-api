@@ -54,8 +54,8 @@ router.post("/register", async (req, res) => {
       "Verify Email",
       link
     );
-    await sendEmail(email, "Verify Your Email", html);
 
+    const emailSent = await sendEmail(email, "Verify Your Email", html);
 
     if (!emailSent) {
       return res.status(500).json({ success: false, msg: "Email sending failed" });
@@ -144,7 +144,7 @@ router.post("/forgot-password", async (req, res) => {
     user.resetTokenExpiry = Date.now() + 3600000; // 1 hour
     await user.save();
 
-    const link = `${process.env.CLIENT_URL}/reset-password/${user._id}/${token}`;
+    const link = `${process.env.CLIENT_URL}/api/sot/auth/reset-password/${user._id}/${token}`;
     const html = buildEmailHTML(
       "Reset Your Password",
       "We received a request to reset your password. Click below to proceed.",

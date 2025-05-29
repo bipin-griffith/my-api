@@ -53,11 +53,11 @@ const PORT = process.env.PORT || 3000;
 // Middleware
 app.use(morgan('dev'));
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/sot/auth', require('./routes/user'));
-app.use("/api/sot/events", require('./routes/events'));
-app.use(express.urlencoded({ extended: true })); // ✅ add this
+app.use("/api/sot/events", require('./routes/events')); 
 
 
 // Start HTTP server
