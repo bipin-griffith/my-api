@@ -1,5 +1,3 @@
-// D:\my-api\models\Event.js
-
 const mongoose = require("mongoose");
 
 const eventSchema = new mongoose.Schema({
@@ -7,9 +5,16 @@ const eventSchema = new mongoose.Schema({
   description: String,
   image: String,
   address: String,
-  date: { type: String, required: true }, // e.g., "2025-05-25"
-  time: String, // e.g., "10:00 AM"
-  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }]
+  date: { type: String, required: true },
+  time: String,
+  participants: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
+  messages: [
+    {
+      sender: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+      text: String,
+      timestamp: { type: Date, default: Date.now }
+    }
+  ]
 });
 
 module.exports = mongoose.model("Event", eventSchema);
